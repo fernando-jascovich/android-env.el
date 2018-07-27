@@ -112,5 +112,23 @@
         (bname "*android-auto-dhu*"))
     (async-shell-command (format "%s && %s" cmd1 cmd2) bname)))
 
+
+;;; Hydras
+(when (require 'hydra nil 'noerror)
+  (defhydra hydra-android (:color teal :hint nil)
+    "
+    ^Compiling^                ^Devices^
+    ^^^^^-----------------------------------------------------
+    _w_: Compile               _e_: Avd              _q_: Quit
+    _s_: Instrumented Test     _d_: Auto DHU
+    _x_: Crashlytics
+    "
+    ("w" compile)
+    ("s" android-test)
+    ("e" android-avd)
+    ("d" android-auto-dhu)
+    ("x" crashlytics)
+    ("q" nil :color light-blue)))
+
 (provide 'android-env)
 ;;; android-env.el ends here
