@@ -127,7 +127,7 @@
     ("s" android-test)
     ("e" android-avd)
     ("d" android-auto-dhu)
-    ("x" crashlytics)
+    ("x" android-crashlytics)
     ("q" nil :color light-blue)))
 
 (provide 'android-env)
