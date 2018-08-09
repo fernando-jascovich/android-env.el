@@ -112,6 +112,33 @@
         (bname "*android-auto-dhu*"))
     (async-shell-command (format "%s && %s" cmd1 cmd2) bname)))
 
+(defun android-logcat-clear ()
+  "Clear android logcat."
+  (interactive)
+  (shell-command "adb logcat -c"))
+
+(defun android-logcat (&optional expr)
+  "Show logcat using EXPR if present."
+  (interactive "sRegex: ")
+  (let ((bname "*Android Logcat*")
+        (args '())
+        (args-format ""))
+    (if expr
+        (progn
+          (add-to-list 'args "-e")
+          (add-to-list 'args expr t)))
+
+    (with-current-buffer (get-buffer-create bname)
+      (view-mode-disable)
+      (switch-to-buffer bname)
+      (erase-buffer)
+      (dolist (a args args-format)
+        (setq args-format (concat args-format "%s ")))
+      (apply 'start-process "Android Logcat" bname "adb" "logcat" args)
+      (face-remap-add-relative 'default '(:height 105))
+      (view-mode))
+  ))
+
 
 ;;; Hydras
 (when (require 'hydra nil 'noerror)
@@ -121,12 +148,15 @@
     ^^^^^-----------------------------------------------------
     _w_: Compile               _e_: Avd              _q_: Quit
     _s_: Instrumented Test     _d_: Auto DHU
-    _x_: Crashlytics
+    _x_: Crashlytics           _l_: Logcat
+                             _c_: Logcat clear
     "
     ("w" compile)
     ("s" android-test)
     ("e" android-avd)
     ("d" android-auto-dhu)
+    ("l" android-logcat)
+    ("c" android-logcat-clear)
     ("x" android-crashlytics)
     ("q" nil :color light-blue)))
 
