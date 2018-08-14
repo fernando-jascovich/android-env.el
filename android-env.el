@@ -152,19 +152,19 @@
 (when (require 'hydra nil 'noerror)
   (defhydra hydra-android (:color teal :hint nil)
     "
-    ^Compiling^                ^Devices^
-    ^^^^^-----------------------------------------------------
-    _w_: Compile               _e_: Avd              _q_: Quit
-    _s_: Instrumented Test     _d_: Auto DHU
-    _x_: Crashlytics           _l_: Logcat
-                             _c_: Logcat clear
+    ^Compiling^                ^Devices^                ^Logcat^
+    ^^^^^-------------------------------------------------------------------------------
+    _w_: Compile               _e_: Avd                 _l_: Logcat               _q_: Quit
+    _s_: Instrumented Test     _d_: Auto DHU            _c_: Logcat crash
+    _x_: Crashlytics                                  _C_: Logcat clear
     "
     ("w" compile)
     ("s" android-test)
     ("e" android-avd)
     ("d" android-auto-dhu)
     ("l" android-logcat)
-    ("c" android-logcat-clear)
+    ("c" android-logcat-crash)
+    ("C" android-logcat-clear)
     ("x" android-crashlytics)
     ("q" nil :color light-blue)))
 
