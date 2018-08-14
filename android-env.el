@@ -117,28 +117,36 @@
   (interactive)
   (shell-command "adb logcat -c"))
 
-(defun android-logcat (&optional expr)
-  "Show logcat using EXPR if present."
-  (interactive "sRegex: ")
+(defun android-logcat-buffer (&optional logcat-args)
+  "Handles buffer related tasks using LOGCAT-ARGS."
+  (let ((bname "*Android Logcat*"))
+    (with-current-buffer (get-buffer-create bname)
+      (switch-to-buffer bname)
+      (let ((inhibit-read-only t)
+            (p (get-buffer-process (current-buffer))))
+        (erase-buffer)
+        (while p
+          (delete-process p)
+          (setq p (get-buffer-process (current-buffer)))))
+      (apply 'start-process "Android Logcat" bname "adb" "logcat" logcat-args)
+      (face-remap-add-relative 'default '(:height 105))
+      (view-mode))))
+
+(defun android-logcat (&optional tag)
+  "Show logcat using TAG for filtering."
+  (interactive "sTag: ")
   (let ((bname "*Android Logcat*")
         (args '())
         (args-format ""))
-    (if expr
-        (progn
-          (add-to-list 'args "-e")
-          (add-to-list 'args expr t)))
+    (when tag
+      (add-to-list 'args "*:S")
+      (add-to-list 'args tag t))
+    (android-logcat-buffer args)))
 
-    (with-current-buffer (get-buffer-create bname)
-      (view-mode-disable)
-      (switch-to-buffer bname)
-      (erase-buffer)
-      (dolist (a args args-format)
-        (setq args-format (concat args-format "%s ")))
-      (apply 'start-process "Android Logcat" bname "adb" "logcat" args)
-      (face-remap-add-relative 'default '(:height 105))
-      (view-mode))
-  ))
-
+(defun android-logcat-crash ()
+  "Show logcat's crash buffer."
+  (interactive)
+  (android-logcat-buffer '("-b" "crash")))
 
 ;;; Hydras
 (when (require 'hydra nil 'noerror)
