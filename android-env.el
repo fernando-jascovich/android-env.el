@@ -138,7 +138,7 @@
   (let ((bname "*Android Logcat*")
         (args '())
         (args-format ""))
-    (when tag
+    (when (and tag (not (string= "" tag)))
       (add-to-list 'args "*:S")
       (add-to-list 'args tag t))
     (android-logcat-buffer args)))
