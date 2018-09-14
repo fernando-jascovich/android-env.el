@@ -29,6 +29,12 @@
   :type 'string
   :group 'android-env)
 
+(defcustom android-env/unit-test-command "testDevDebug"
+  "The android-env default unit test action."
+  :type 'string
+  :group 'android-env)
+
+
 (require 'compile)
 (require 'cl)
 
@@ -76,15 +82,24 @@
     (compile (format "cd %s; %s %s:assemble%s %s:crashlyticsUploadDistribution%s" mkfile android-env/executable module build module build)))
   (gradleMake))
 
-(defun android-test ()
-  "Execute test."
-  (interactive)
+(defun android-gradle (gradle-cmd)
+  "Execute GRADLE-CMD."
   (add-to-list 'compilation-error-regexp-alist
                '(":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
   (add-to-list 'compilation-error-regexp-alist
                '("^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3))
   (let ((mkfile (get-closest-pathname "gradlew")) cmd)
-    (compile (format "cd %s; %s %s" mkfile android-env/executable android-env/test-command))))
+    (compile (format "cd %s; %s %s" mkfile android-env/executable gradle-cmd))))
+
+(defun android-test ()
+  "Execute instrumented test."
+  (interactive)
+  (android-gradle android-env/test-command))
+
+(defun android-unit-test ()
+  "Execute unit test."
+  (interactive)
+  (android-gradle android-env/unit-test-command))
 
 (defun android-avd-list ()
   "Return shell command output as list."
@@ -156,10 +171,12 @@
     ^^^^^-------------------------------------------------------------------------------
     _w_: Compile               _e_: Avd                 _l_: Logcat               _q_: Quit
     _s_: Instrumented Test     _d_: Auto DHU            _c_: Logcat crash
-    _x_: Crashlytics                                  _C_: Logcat clear
+    _u_: Unit Test                                    _C_: Logcat clear
+    _x_: Crashlytics
     "
     ("w" compile)
     ("s" android-test)
+    ("u" android-unit-test)
     ("e" android-avd)
     ("d" android-auto-dhu)
     ("l" android-logcat)
