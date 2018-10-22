@@ -35,6 +35,12 @@
   :group 'android-env)
 
 
+(defcustom android-env/adb-buffer-name "*android-adb*"
+  "Name used for adb async output."
+  :type 'string
+  :group 'android-env)
+
+
 (require 'compile)
 (require 'cl)
 
@@ -163,15 +169,23 @@
   (interactive)
   (android-logcat-buffer '("-b" "crash")))
 
+
+(defun android-uninstall-app (package)
+  "Uninstall application by PACKAGE name."
+  (interactive "sPackage: ")
+  (shell-command
+   (format "adb shell pm uninstall '%s'" package)
+   android-env/adb-buffer-name))
+
 ;;; Hydras
 (when (require 'hydra nil 'noerror)
   (defhydra hydra-android (:color teal :hint nil)
     "
-    ^Compiling^                ^Devices^                ^Logcat^
-    ^^^^^-------------------------------------------------------------------------------
-    _w_: Compile               _e_: Avd                 _l_: Logcat               _q_: Quit
-    _s_: Instrumented Test     _d_: Auto DHU            _c_: Logcat crash
-    _u_: Unit Test                                    _C_: Logcat clear
+    ^Compiling^                   ^Devices^               ^Logcat^                       ^Adb^
+    ^^^^^-----------------------------------------------------------------------------------------------------------------
+    _w_: Compile                  _e_: Avd                _l_: Logcat                    _U_: Uninstall          _q_: Quit
+    _s_: Instrumented Test        _d_: Auto DHU           _c_: Logcat crash
+    _u_: Unit Test                ^ ^                     _C_: Logcat clear
     _x_: Crashlytics
     "
     ("w" compile)
@@ -183,6 +197,7 @@
     ("c" android-logcat-crash)
     ("C" android-logcat-clear)
     ("x" android-crashlytics)
+    ("U" android-uninstall-app)
     ("q" nil :color light-blue)))
 
 (provide 'android-env)
