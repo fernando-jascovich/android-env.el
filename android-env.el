@@ -181,13 +181,15 @@
 (when (require 'hydra nil 'noerror)
   (defhydra hydra-android (:color teal :hint nil)
     "
-    ^Compiling^                   ^Devices^               ^Logcat^                       ^Adb^
-    ^^^^^-----------------------------------------------------------------------------------------------------------------
-    _w_: Compile                  _e_: Avd                _l_: Logcat                    _U_: Uninstall          _q_: Quit
-    _s_: Instrumented Test        _d_: Auto DHU           _c_: Logcat crash
-    _u_: Unit Test                ^ ^                     _C_: Logcat clear
-    _x_: Crashlytics
-    "
+
+^Compiling^                ^Devices^            ^Logcat^                    ^Adb^
+^^^^^-------------------------------------------------------------------------------------
+_w_: Compile               _e_: Avd             _l_: Logcat                 _U_: Uninstall
+_s_: Instrumented Test     _d_: Auto DHU        _c_: Logcat crash
+_u_: Unit Test             ^ ^                  _C_: Logcat clear
+_x_: Crashlytics
+
+"
     ("w" compile)
     ("s" android-test)
     ("u" android-unit-test)
@@ -198,7 +200,7 @@
     ("C" android-logcat-clear)
     ("x" android-crashlytics)
     ("U" android-uninstall-app)
-    ("q" nil :color light-blue)))
+    ("q" nil "quit")))
 
 (provide 'android-env)
 ;;; android-env.el ends here
