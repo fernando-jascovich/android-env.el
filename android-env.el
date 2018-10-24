@@ -177,6 +177,14 @@
    (format "adb shell pm uninstall '%s'" package)
    android-env/adb-buffer-name))
 
+
+(defun android-deeplink (deeplink)
+  "Send DEEPLINK to emulator."
+  (interactive "sDeep link: ")
+  (shell-command
+   (format "adb shell am start -a android.intent.action.VIEW -d \"%s\"" deeplink)
+   android-env/adb-buffer-name))
+
 ;;; Hydras
 (when (require 'hydra nil 'noerror)
   (defhydra hydra-android (:color teal :hint nil)
@@ -185,7 +193,7 @@
 ^Compiling^                ^Devices^            ^Logcat^                    ^Adb^
 ^^^^^-------------------------------------------------------------------------------------
 _w_: Compile               _e_: Avd             _l_: Logcat                 _U_: Uninstall
-_s_: Instrumented Test     _d_: Auto DHU        _c_: Logcat crash
+_s_: Instrumented Test     _d_: Auto DHU        _c_: Logcat crash           _L_: Deep link
 _u_: Unit Test             ^ ^                  _C_: Logcat clear
 _x_: Crashlytics
 
@@ -200,6 +208,7 @@ _x_: Crashlytics
     ("C" android-logcat-clear)
     ("x" android-crashlytics)
     ("U" android-uninstall-app)
+    ("L" android-deeplink)
     ("q" nil "quit")))
 
 (provide 'android-env)
