@@ -125,10 +125,14 @@
      (format "%s @%s" android-env/emulator-command selected)
      (format "*android-emulator-%s" selected))))
 
+(defun android-adb ()
+  "Return adb full path based on ANDROID_SDK_ROOT env var."
+  (concat (getenv "ANDROID_SDK_ROOT") "/platform-tools/adb"))
+
 (defun android-auto-dhu ()
   "Launches android auto desktop head unit."
   (interactive)
-  (let ((cmd1 "adb forward tcp:5277 tcp:5277")
+  (let ((cmd1 "$ANDROID_SDK_ROOT/platform-tools/adb forward tcp:5277 tcp:5277")
         (cmd2 "$ANDROID_SDK_ROOT/extras/google/auto/desktop-head-unit")
         (bname "*android-auto-dhu*"))
     (async-shell-command (format "%s && %s" cmd1 cmd2) bname)))
@@ -136,7 +140,7 @@
 (defun android-logcat-clear ()
   "Clear android logcat."
   (interactive)
-  (shell-command "adb logcat -c"))
+  (shell-command (concat (android-adb) " logcat -c")))
 
 (defun android-logcat-buffer (&optional logcat-args)
   "Handles buffer related tasks using LOGCAT-ARGS."
@@ -149,7 +153,7 @@
         (while p
           (delete-process p)
           (setq p (get-buffer-process (current-buffer)))))
-      (apply 'start-process "Android Logcat" bname "adb" "logcat" logcat-args)
+      (apply 'start-process "Android Logcat" bname (android-adb) "logcat" logcat-args)
       (face-remap-add-relative 'default '(:height 105))
       (view-mode))))
 
@@ -174,7 +178,7 @@
   "Uninstall application by PACKAGE name."
   (interactive "sPackage: ")
   (shell-command
-   (format "adb shell pm uninstall '%s'" package)
+   (format "%s shell pm uninstall '%s'" (android-adb) package)
    android-env/adb-buffer-name))
 
 
@@ -182,7 +186,7 @@
   "Send DEEPLINK to emulator."
   (interactive "sDeep link: ")
   (shell-command
-   (format "adb shell am start -a android.intent.action.VIEW -d \"%s\"" deeplink)
+   (format "%s shell am start -a android.intent.action.VIEW -d \"%s\"" (android-adb) deeplink)
    android-env/adb-buffer-name))
 
 ;;; Hydras
