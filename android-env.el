@@ -109,8 +109,9 @@
 
 (defun android-avd-list ()
   "Return shell command output as list."
-  (let (out out-list)
-    (setq out (shell-command-to-string "avdmanager list avd --compact -0"))
+  (let (out out-list avdmanager)
+    (setq avdmanager (concat (getenv "ANDROID_SDK_ROOT") "/tools/bin/avdmanager"))
+    (setq out (shell-command-to-string (concat avdmanager " list avd --compact -0")))
     (setq out-list (split-string out "\0"))
     (delete (pop out-list) out-list)
     (delete "" out-list)))
