@@ -1,4 +1,4 @@
-;;; android-env --- Helper functions for working in android
+;;; android-env.el --- Helper functions for working in android
 
 ;; Author: Fernando Jascovich
 ;; Keywords: android, gradle, java
