@@ -61,6 +61,7 @@
               if (equal d root) return nil)))
 
 (defun gradleMake ()
+  "Look for nearest gradlew file in order to determine proper directory of execution and add javac compile and kotlin compile output for error navigation."
   (unless (file-exists-p "gradlew")
     (set (make-local-variable 'compile-command)
          (let ((mkfile (get-closest-pathname "gradlew")))
