@@ -1,6 +1,14 @@
-;;; android-env --- M-x compile support
+;;; android-env --- Helper functions for working in android
+
+;; Author: Fernando Jascovich
+;; Keywords: android, gradle, java
+;; Package-Requires: ((emacs "24.1"))
+
+;; This file is NOT part of GNU Emacs
+
 ;;; Commentary:
-;;; Helper functions for working in android
+
+;; Helper functions for working in android, mainly helps with compiling, launching emulators, deeplinks and common day-to-day tasks of an android developer.
 
 ;;; Code:
 
@@ -217,4 +225,5 @@ _x_: Crashlytics
     ("q" nil "quit")))
 
 (provide 'android-env)
+
 ;;; android-env.el ends here
