@@ -241,7 +241,7 @@
   (defhydra hydra-android (:color teal :hint nil)
     "
 ^Compiling^            ^Devices^       ^Logcat^                 ^Adb^
-^^^^^------------------------------------------------------------------------
+^^^^^-------------------------------------------------------------------------
 _w_: Compile           _e_: Avd        _l_: Logcat              _U_: Uninstall
 _s_: Instrumented Test _d_: Auto DHU   _c_: Logcat crash        _L_: Deep link
 _u_: Unit Test         ^ ^             _C_: Logcat clear
