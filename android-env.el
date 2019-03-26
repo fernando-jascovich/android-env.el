@@ -162,8 +162,7 @@
   "Prompts for avd launch based on current avds."
   (interactive)
   (message "Getting avd list..." )
-  (let (selected)
-    (setq selected (completing-read "Select avd: " (android-env-avd-list)))
+  (let ((selected (completing-read "Select avd: " (android-env-avd-list))))
     (async-shell-command
      (format "%s @%s" android-env-emulator-command selected)
      (format "*android-emulator-%s" selected))))
