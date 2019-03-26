@@ -163,7 +163,7 @@
   (interactive)
   (message "Getting avd list..." )
   (let (selected)
-    (setq selected (ido-completing-read "Select avd: " (android-env-avd-list)))
+    (setq selected (completing-read "Select avd: " (android-env-avd-list)))
     (async-shell-command
      (format "%s @%s" android-env-emulator-command selected)
      (format "*android-emulator-%s" selected))))
