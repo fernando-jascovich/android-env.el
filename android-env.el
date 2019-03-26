@@ -1,72 +1,98 @@
 ;;; android-env.el --- Helper functions for working in android
 
 ;; Author: Fernando Jascovich
-;; Keywords: android, gradle, java
+;; Keywords: android, gradle, java, tools, convenience
+;; Version: 0.1
+;; Url: https://github.com/fernando-jascovich/android-env.el
 ;; Package-Requires: ((emacs "24.1"))
 
 ;; This file is NOT part of GNU Emacs
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 
 ;;; Commentary:
 
-;; Helper functions for working in android, mainly helps with compiling, launching emulators, deeplinks and common day-to-day tasks of an android developer.
+;; Helper functions for working in android, mainly helps with compiling,
+;; launching emulators, deeplinks and common day-to-day tasks of an android
+;; developer.
 
 ;;; Code:
+(require 'compile)
+(require 'hydra nil 'noerror)
 
 (defgroup android-env nil
   "Configuration options for android-env.el"
   :group 'convenience)
 
-(defcustom android-env/executable "./gradlew"
+(defcustom android-env-executable "./gradlew"
   "The android-env gradle exec."
   :type 'string
   :group 'android-env)
 
-(defcustom android-env/command "installDev"
+(defcustom android-env-command "installDev"
   "The android-env default gradle action."
   :type 'string
   :group 'android-env)
 
-(defcustom android-env/test-command "testDev"
+(defcustom android-env-test-command "testDev"
   "The android-env default gradle action."
   :type 'string
   :group 'android-env)
 
-(defcustom android-env/emulator-command
+(defcustom android-env-emulator-command
   "~/.android/sdk/emulator/emulator"
   "Android emulator bin location."
   :type 'string
   :group 'android-env)
 
-(defcustom android-env/unit-test-command "testDevDebug"
+(defcustom android-env-unit-test-command "testDevDebug"
   "The android-env default unit test action."
   :type 'string
   :group 'android-env)
 
 
-(defcustom android-env/adb-buffer-name "*android-adb*"
+(defcustom android-env-adb-buffer-name "*android-adb*"
   "Name used for adb async output."
   :type 'string
   :group 'android-env)
 
+(defun android-env-get-closest-pathname ()
+  "Find closest ancestor directory containing gradlew file."
+  (let ((file "gradlew")
+        (root (expand-file-name "/"))
+        (fname nil)
+        (dir default-directory))
+    (while (not fname)
+      (if (file-exists-p (expand-file-name file dir))
+          (setq fname (replace-regexp-in-string " " "\\ " dir t t))
+        (setq dir (expand-file-name ".." dir))
+        (if (equal dir root)
+            (setq fname t))))
+    (if (not (equal fname t))
+        fname)))
 
-(require 'compile)
-(require 'cl)
-
-(defun* get-closest-pathname (&optional (file "Makefile"))
-  (let ((root (expand-file-name "/")))
-    (loop for d = default-directory
-          then (expand-file-name ".." d)
-          if (file-exists-p
-              (expand-file-name file d)) return (replace-regexp-in-string " " "\\ " d t t)
-              if (equal d root) return nil)))
-
-(defun gradleMake ()
-  "Look for nearest gradlew file in order to determine proper directory of execution and add javac compile and kotlin compile output for error navigation."
+(defun android-env-gradle-make ()
+  "Look for nearest gradlew file and add javac and kotlin regex to compile."
   (unless (file-exists-p "gradlew")
     (set (make-local-variable 'compile-command)
-         (let ((mkfile (get-closest-pathname "gradlew")))
+         (let ((mkfile (android-env-get-closest-pathname))
+               (fmt "cd %s; %s %s"))
            (if mkfile
-               (format "cd %s; %s %s" mkfile android-env/executable android-env/command)))))
+               (format fmt
+                       mkfile
+                       android-env-executable
+                       android-env-command)))))
   (add-to-list 'compilation-error-regexp-alist
                '(":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
   (add-to-list 'compilation-error-regexp-alist
@@ -75,71 +101,78 @@
 (defun android-env ()
   "Set the classpath and invokes jde."
   (interactive)
-  (add-hook 'java-mode-hook 'gradleMake)
-  (add-hook 'nxml-mode-hook 'gradleMake)
-  (add-hook 'web-mode-hook 'gradleMake)
-  (add-hook 'groovy-mode-hook 'gradleMake)
-  (add-hook 'kotlin-mode-hook 'gradleMake)
+  (add-hook 'java-mode-hook 'android-env-gradle-make)
+  (add-hook 'nxml-mode-hook 'android-env-gradle-make)
+  (add-hook 'web-mode-hook 'android-env-gradle-make)
+  (add-hook 'groovy-mode-hook 'android-env-gradle-make)
+  (add-hook 'kotlin-mode-hook 'android-env-gradle-make)
   (add-to-list 'compilation-error-regexp-alist
                '(":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
-  (gradleMake))
+  (android-env-gradle-make))
 
-(defun android-gradle-daemon-start ()
+(defun android-env-gradle-daemon-start ()
   "Run gradlew in a shell buffer for daemon persistence."
   (interactive)
-  (let ((mkfile (get-closest-pathname "gradlew")))
-    (call-process-shell-command (format "%s/gradlew &" mkfile) nil "*Gradle daemon*")))
+  (let ((mkfile (android-env-get-closest-pathname)))
+    (call-process-shell-command
+     (format "%s/gradlew &" mkfile) nil "*Gradle daemon*")))
 
-(defun android-crashlytics (module build)
-  "Triggers the gradle commands for assemble and upload the MODULE and BUILD to crashlytics."
+(defun android-env-crashlytics (module build)
+  "Assemble and upload the MODULE and BUILD to crashlytics."
   (interactive "sModule: \nsBuild: ")
-  (let ((mkfile (get-closest-pathname "gradlew")))
-    (compile (format "cd %s; %s %s:assemble%s %s:crashlyticsUploadDistribution%s" mkfile android-env/executable module build module build)))
-  (gradleMake))
+  (let ((mkfile (android-env-get-closest-pathname))
+        (fmt "cd %s; %s %s:assemble%s %s:crashlyticsUploadDistribution%s"))
+    (compile (format fmt
+                     mkfile
+                     android-env-executable module build module build)))
+  (android-env-gradle-make))
 
-(defun android-gradle (gradle-cmd)
+(defun android-env-gradle (gradle-cmd)
   "Execute GRADLE-CMD."
   (add-to-list 'compilation-error-regexp-alist
                '(":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
   (add-to-list 'compilation-error-regexp-alist
                '("^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3))
-  (let ((mkfile (get-closest-pathname "gradlew")) cmd)
-    (compile (format "cd %s; %s %s" mkfile android-env/executable gradle-cmd))))
+  (let ((mkfile (android-env-get-closest-pathname)) cmd)
+    (compile (format "cd %s; %s %s" mkfile android-env-executable gradle-cmd))))
 
-(defun android-test ()
+(defun android-env-test ()
   "Execute instrumented test."
   (interactive)
-  (android-gradle android-env/test-command))
+  (android-env-gradle android-env-test-command))
 
-(defun android-unit-test ()
+(defun android-env-unit-test ()
   "Execute unit test."
   (interactive)
-  (android-gradle android-env/unit-test-command))
+  (android-env-gradle android-env-unit-test-command))
 
-(defun android-avd-list ()
+(defun android-env-avd-list ()
   "Return shell command output as list."
   (let (out out-list avdmanager)
-    (setq avdmanager (concat (getenv "ANDROID_SDK_ROOT") "/tools/bin/avdmanager"))
-    (setq out (shell-command-to-string (concat avdmanager " list avd --compact -0")))
+    (setq avdmanager (concat
+                      (getenv "ANDROID_SDK_ROOT")
+                      "/tools/bin/avdmanager"))
+    (setq out (shell-command-to-string
+               (concat avdmanager " list avd --compact -0")))
     (setq out-list (split-string out "\0"))
     (delete (pop out-list) out-list)
     (delete "" out-list)))
 
-(defun android-avd ()
+(defun android-env-avd ()
   "Prompts for avd launch based on current avds."
   (interactive)
   (message "Getting avd list..." )
   (let (selected)
-    (setq selected (ido-completing-read "Select avd: " (android-avd-list)))
+    (setq selected (ido-completing-read "Select avd: " (android-env-avd-list)))
     (async-shell-command
-     (format "%s @%s" android-env/emulator-command selected)
+     (format "%s @%s" android-env-emulator-command selected)
      (format "*android-emulator-%s" selected))))
 
-(defun android-adb ()
+(defun android-env-adb ()
   "Return adb full path based on ANDROID_SDK_ROOT env var."
   (concat (getenv "ANDROID_SDK_ROOT") "/platform-tools/adb"))
 
-(defun android-auto-dhu ()
+(defun android-env-auto-dhu ()
   "Launches android auto desktop head unit."
   (interactive)
   (let ((cmd1 "$ANDROID_SDK_ROOT/platform-tools/adb forward tcp:5277 tcp:5277")
@@ -147,12 +180,12 @@
         (bname "*android-auto-dhu*"))
     (async-shell-command (format "%s && %s" cmd1 cmd2) bname)))
 
-(defun android-logcat-clear ()
+(defun android-env-logcat-clear ()
   "Clear android logcat."
   (interactive)
-  (shell-command (concat (android-adb) " logcat -c")))
+  (shell-command (concat (android-env-adb) " logcat -c")))
 
-(defun android-logcat-buffer (&optional logcat-args)
+(defun android-env-logcat-buffer (&optional logcat-args)
   "Handles buffer related tasks using LOGCAT-ARGS."
   (let ((bname "*Android Logcat*"))
     (with-current-buffer (get-buffer-create bname)
@@ -163,11 +196,14 @@
         (while p
           (delete-process p)
           (setq p (get-buffer-process (current-buffer)))))
-      (apply 'start-process "Android Logcat" bname (android-adb) "logcat" logcat-args)
+      (apply 'start-process
+             "Android Logcat"
+             bname
+             (android-env-adb) "logcat" logcat-args)
       (face-remap-add-relative 'default '(:height 105))
       (view-mode))))
 
-(defun android-logcat (&optional tag)
+(defun android-env-logcat (&optional tag)
   "Show logcat using TAG for filtering."
   (interactive "sTag: ")
   (let ((bname "*Android Logcat*")
@@ -176,53 +212,53 @@
     (when (and tag (not (string= "" tag)))
       (add-to-list 'args "*:S")
       (add-to-list 'args tag t))
-    (android-logcat-buffer args)))
+    (android-env-logcat-buffer args)))
 
-(defun android-logcat-crash ()
+(defun android-env-logcat-crash ()
   "Show logcat's crash buffer."
   (interactive)
-  (android-logcat-buffer '("-b" "crash")))
+  (android-env-logcat-buffer '("-b" "crash")))
 
 
-(defun android-uninstall-app (package)
+(defun android-env-uninstall-app (package)
   "Uninstall application by PACKAGE name."
   (interactive "sPackage: ")
   (shell-command
-   (format "%s shell pm uninstall '%s'" (android-adb) package)
-   android-env/adb-buffer-name))
+   (format "%s shell pm uninstall '%s'" (android-env-adb) package)
+   android-env-adb-buffer-name))
 
 
-(defun android-deeplink (deeplink)
+(defun android-env-deeplink (deeplink)
   "Send DEEPLINK to emulator."
   (interactive "sDeep link: ")
   (shell-command
-   (format "%s shell am start -a android.intent.action.VIEW -d \"%s\"" (android-adb) deeplink)
-   android-env/adb-buffer-name))
+   (format "%s shell am start -a android.intent.action.VIEW -d \"%s\""
+           (android-env-adb)
+           deeplink)
+   android-env-adb-buffer-name))
 
 ;;; Hydras
 (when (require 'hydra nil 'noerror)
   (defhydra hydra-android (:color teal :hint nil)
     "
-
-^Compiling^                ^Devices^            ^Logcat^                    ^Adb^
-^^^^^-------------------------------------------------------------------------------------
-_w_: Compile               _e_: Avd             _l_: Logcat                 _U_: Uninstall
-_s_: Instrumented Test     _d_: Auto DHU        _c_: Logcat crash           _L_: Deep link
-_u_: Unit Test             ^ ^                  _C_: Logcat clear
+^Compiling^            ^Devices^       ^Logcat^                 ^Adb^
+^^^^^------------------------------------------------------------------------
+_w_: Compile           _e_: Avd        _l_: Logcat              _U_: Uninstall
+_s_: Instrumented Test _d_: Auto DHU   _c_: Logcat crash        _L_: Deep link
+_u_: Unit Test         ^ ^             _C_: Logcat clear
 _x_: Crashlytics
-
 "
     ("w" compile)
-    ("s" android-test)
-    ("u" android-unit-test)
-    ("e" android-avd)
-    ("d" android-auto-dhu)
-    ("l" android-logcat)
-    ("c" android-logcat-crash)
-    ("C" android-logcat-clear)
-    ("x" android-crashlytics)
-    ("U" android-uninstall-app)
-    ("L" android-deeplink)
+    ("s" android-env-test)
+    ("u" android-env-unit-test)
+    ("e" android-env-avd)
+    ("d" android-env-auto-dhu)
+    ("l" android-env-logcat)
+    ("c" android-env-logcat-crash)
+    ("C" android-env-logcat-clear)
+    ("x" android-env-crashlytics)
+    ("U" android-env-uninstall-app)
+    ("L" android-env-deeplink)
     ("q" nil "quit")))
 
 (provide 'android-env)
