@@ -164,7 +164,8 @@
   (message "Getting avd list..." )
   (let ((selected (completing-read "Select avd: " (android-env-avd-list))))
     (async-shell-command
-     (format "%s @%s" android-env-emulator-command selected)
+     (format "%s @%s" android-env-emulator-command
+             (shell-quote-argument selected))
      (format "*android-emulator-%s" selected))))
 
 (defun android-env-adb ()
