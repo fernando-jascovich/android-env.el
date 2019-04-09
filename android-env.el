@@ -40,11 +40,6 @@
   :type 'string
   :group 'android-env)
 
-(defcustom android-env-command "installDev"
-  "The android-env default gradle action."
-  :type 'string
-  :group 'android-env)
-
 (defcustom android-env-test-command "testDev"
   "The android-env default gradle action."
   :type 'string
@@ -67,74 +62,45 @@
   :type 'string
   :group 'android-env)
 
-(defun android-env-get-closest-pathname ()
-  "Find closest ancestor directory containing gradlew file."
-  (let ((file "gradlew")
-        (root (expand-file-name "/"))
-        (fname nil)
-        (dir default-directory))
-    (while (not fname)
-      (if (file-exists-p (expand-file-name file dir))
-          (setq fname (replace-regexp-in-string " " "\\ " dir t t))
-        (setq dir (expand-file-name ".." dir))
-        (if (equal dir root)
-            (setq fname t))))
-    (if (not (equal fname t))
-        fname)))
-
-(defun android-env-gradle-make ()
-  "Look for nearest gradlew file and add javac and kotlin regex to compile."
-  (unless (file-exists-p "gradlew")
-    (set (make-local-variable 'compile-command)
-         (let ((mkfile (android-env-get-closest-pathname))
-               (fmt "cd %s; %s %s"))
-           (if mkfile
-               (format fmt
-                       mkfile
-                       android-env-executable
-                       android-env-command)))))
-  (add-to-list 'compilation-error-regexp-alist
-               '(":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
-  (add-to-list 'compilation-error-regexp-alist
-               '("^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3)))
+(defcustom android-env-hydra nil
+  "A t here will initialize an hydra with main android-env functions."
+  :type 'boolean
+  :group 'android-env)
 
 (defun android-env ()
-  "Set the classpath and invokes jde."
+  "Set compilation error regexps."
   (interactive)
-  (add-hook 'java-mode-hook 'android-env-gradle-make)
-  (add-hook 'nxml-mode-hook 'android-env-gradle-make)
-  (add-hook 'web-mode-hook 'android-env-gradle-make)
-  (add-hook 'groovy-mode-hook 'android-env-gradle-make)
-  (add-hook 'kotlin-mode-hook 'android-env-gradle-make)
-  (add-to-list 'compilation-error-regexp-alist
-               '(":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
-  (android-env-gradle-make))
-
-(defun android-env-gradle-daemon-start ()
-  "Run gradlew in a shell buffer for daemon persistence."
-  (interactive)
-  (let ((mkfile (android-env-get-closest-pathname)))
-    (call-process-shell-command
-     (format "%s/gradlew &" mkfile) nil "*Gradle daemon*")))
+  (add-to-list 'compilation-error-regexp-alist-alist
+               '(android-java ":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
+  (add-to-list 'compilation-error-regexp-alist-alist
+               '(android-kotlin "^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3))
+  (define-compilation-mode android-compile-mode "Android Compile"
+    "Compilation mode for android compile."
+    (set (make-local-variable 'compilation-error-regexp-alist)
+         '(android-java android-kotlin)))
+  (if android-env-hydra
+      (android-env-hydra-setup)))
 
 (defun android-env-crashlytics (module build)
   "Assemble and upload the MODULE and BUILD to crashlytics."
   (interactive "sModule: \nsBuild: ")
-  (let ((mkfile (android-env-get-closest-pathname))
-        (fmt "cd %s; %s %s:assemble%s %s:crashlyticsUploadDistribution%s"))
-    (compile (format fmt
-                     mkfile
-                     android-env-executable module build module build)))
-  (android-env-gradle-make))
+  (android-env-gradle (format "%s:assemble%s %s:crashlyticsUploadDistribution%s"
+                              module
+                              build
+                              module
+                              build)))
 
 (defun android-env-gradle (gradle-cmd)
   "Execute GRADLE-CMD."
-  (add-to-list 'compilation-error-regexp-alist
-               '(":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
-  (add-to-list 'compilation-error-regexp-alist
-               '("^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3))
-  (let ((mkfile (android-env-get-closest-pathname)) cmd)
-    (compile (format "cd %s; %s %s" mkfile android-env-executable gradle-cmd))))
+  (let ((path (locate-dominating-file "." "gradlew"))
+        cmd)
+    (if (not path)
+        (message "Couldn't find a gradle project in ancestors directories")
+      (setq cmd (format "cd %s; %s %s"
+                        (shell-quote-argument path)
+                        (shell-quote-argument android-env-executable)
+                        (shell-quote-argument gradle-cmd)))
+      (compilation-start cmd 'android-compile-mode))))
 
 (defun android-env-test ()
   "Execute instrumented test."
@@ -193,7 +159,7 @@
       (let ((inhibit-read-only t)
             (p (get-buffer-process (current-buffer))))
         (erase-buffer)
-        (while p
+        (when p
           (delete-process p)
           (setq p (get-buffer-process (current-buffer)))))
       (apply 'start-process
@@ -219,7 +185,6 @@
   (interactive)
   (android-env-logcat-buffer '("-b" "crash")))
 
-
 (defun android-env-uninstall-app (package)
   "Uninstall application by PACKAGE name."
   (interactive "sPackage: ")
@@ -227,20 +192,25 @@
    (format "%s shell pm uninstall '%s'" (android-env-adb) package)
    android-env-adb-buffer-name))
 
-
 (defun android-env-deeplink (deeplink)
   "Send DEEPLINK to emulator."
   (interactive "sDeep link: ")
-  (shell-command
-   (format "%s shell am start -a android.intent.action.VIEW -d \"%s\""
-           (android-env-adb)
-           deeplink)
-   android-env-adb-buffer-name))
+  (let ((command (android-env-adb))
+        (args (format "am start -a android.intent.action.VIEW -d \"%s\""
+                      deeplink)))
+    (shell-command (format "%s shell %s" command (shell-quote-argument args))
+                   android-env-adb-buffer-name)))
 
-;;; Hydras
-(when (require 'hydra nil 'noerror)
-  (defhydra hydra-android (:color teal :hint nil)
-    "
+(defun android-env-compile (task)
+  "Execute gradle compilation using TASK."
+  (interactive "sTask: ")
+  (android-env-gradle task))
+
+(defun android-env-hydra-setup ()
+  "Hydra setup."
+  (when (require 'hydra nil 'noerror)
+    (defhydra hydra-android (:color teal :hint nil)
+      "
 ^Compiling^            ^Devices^       ^Logcat^                 ^Adb^
 ^^^^^-------------------------------------------------------------------------
 _w_: Compile           _e_: Avd        _l_: Logcat              _U_: Uninstall
@@ -248,19 +218,19 @@ _s_: Instrumented Test _d_: Auto DHU   _c_: Logcat crash        _L_: Deep link
 _u_: Unit Test         ^ ^             _C_: Logcat clear
 _x_: Crashlytics
 "
-    ("w" compile)
-    ("s" android-env-test)
-    ("u" android-env-unit-test)
-    ("e" android-env-avd)
-    ("d" android-env-auto-dhu)
-    ("l" android-env-logcat)
-    ("c" android-env-logcat-crash)
-    ("C" android-env-logcat-clear)
-    ("x" android-env-crashlytics)
-    ("U" android-env-uninstall-app)
-    ("L" android-env-deeplink)
-    ("q" nil "quit")))
+      ("w" android-env-compile)
+      ("s" android-env-test)
+      ("u" android-env-unit-test)
+      ("e" android-env-avd)
+      ("d" android-env-auto-dhu)
+      ("l" android-env-logcat)
+      ("c" android-env-logcat-crash)
+      ("C" android-env-logcat-clear)
+      ("x" android-env-crashlytics)
+      ("U" android-env-uninstall-app)
+      ("L" android-env-deeplink)
+      ("q" nil "quit"))))
+
 
 (provide 'android-env)
-
 ;;; android-env.el ends here
