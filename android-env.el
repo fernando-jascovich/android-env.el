@@ -56,14 +56,13 @@
   :type 'string
   :group 'android-env)
 
-
 (defcustom android-env-adb-buffer-name "*android-adb*"
   "Name used for adb async output."
   :type 'string
   :group 'android-env)
 
 (defcustom android-env-hydra nil
-  "A t here will initialize an hydra with main android-env functions."
+  "A t here will initialize an hydra when invoking android-env."
   :type 'boolean
   :group 'android-env)
 
@@ -97,7 +96,7 @@
     (if (not path)
         (message "Couldn't find a gradle project in ancestors directories")
       (setq cmd (format "cd %s; %s %s"
-                        (shell-quote-argument path)
+                        (shell-quote-wildcard-pattern path)
                         (shell-quote-argument android-env-executable)
                         (shell-quote-argument gradle-cmd)))
       (compilation-start cmd 'android-compile-mode))))
@@ -198,7 +197,9 @@
   (let ((command (android-env-adb))
         (args (format "am start -a android.intent.action.VIEW -d \"%s\""
                       deeplink)))
-    (shell-command (format "%s shell %s" command (shell-quote-argument args))
+    (shell-command (format "%s shell %s"
+                           (shell-quote-wildcard-pattern command)
+                           (shell-quote-argument args))
                    android-env-adb-buffer-name)))
 
 (defun android-env-compile (task)
