@@ -62,7 +62,8 @@
   :group 'android-env)
 
 (defcustom android-env-hydra nil
-  "A t here will initialize an hydra when invoking android-env."
+  "A t here will allow hydra initialization when invoking android-env.
+Requires 'hydra."
   :type 'boolean
   :group 'android-env)
 
@@ -73,7 +74,7 @@
                '(android-java ":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
   (add-to-list 'compilation-error-regexp-alist-alist
                '(android-kotlin "^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3))
-  (define-compilation-mode android-compile-mode "Android Compile"
+  (define-compilation-mode android-env-compile-mode "Android Compile"
     "Compilation mode for android compile."
     (set (make-local-variable 'compilation-error-regexp-alist)
          '(android-java android-kotlin)))
@@ -99,7 +100,7 @@
                         (shell-quote-wildcard-pattern path)
                         (shell-quote-argument android-env-executable)
                         (shell-quote-argument gradle-cmd)))
-      (compilation-start cmd 'android-compile-mode))))
+      (compilation-start cmd 'android-env-compile-mode))))
 
 (defun android-env-test ()
   "Execute instrumented test."
