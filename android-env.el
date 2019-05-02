@@ -4,7 +4,7 @@
 ;; Keywords: android, gradle, java, tools, convenience
 ;; Version: 0.1
 ;; Url: https://github.com/fernando-jascovich/android-env.el
-;; Package-Requires: ((emacs "24.1"))
+;; Package-Requires: ((emacs "24.3"))
 
 ;; This file is NOT part of GNU Emacs
 ;; This program is free software; you can redistribute it and/or modify
@@ -67,19 +67,20 @@ Requires 'hydra."
   :type 'boolean
   :group 'android-env)
 
+(add-to-list 'compilation-error-regexp-alist-alist
+             '(android-java ":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
+(add-to-list 'compilation-error-regexp-alist-alist
+             '(android-kotlin "^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3))
+
+(define-compilation-mode android-env-compile-mode "Android Compile"
+  "Compilation mode for android compile."
+  (setq-local compilation-error-regexp-alist '(android-java android-kotlin)))
+
 (defun android-env ()
   "Set compilation error regexps."
   (interactive)
-  (add-to-list 'compilation-error-regexp-alist-alist
-               '(android-java ":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
-  (add-to-list 'compilation-error-regexp-alist-alist
-               '(android-kotlin "^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3))
-  (define-compilation-mode android-env-compile-mode "Android Compile"
-    "Compilation mode for android compile."
-    (set (make-local-variable 'compilation-error-regexp-alist)
-         '(android-java android-kotlin)))
-  (if android-env-hydra
-      (android-env-hydra-setup)))
+  (when android-env-hydra
+    (android-env-hydra-setup)))
 
 (defun android-env-crashlytics (module build)
   "Assemble and upload the MODULE and BUILD to crashlytics."
@@ -92,15 +93,14 @@ Requires 'hydra."
 
 (defun android-env-gradle (gradle-cmd)
   "Execute GRADLE-CMD."
-  (let ((path (locate-dominating-file "." "gradlew"))
-        cmd)
+  (let ((path (locate-dominating-file "." "gradlew")))
     (if (not path)
         (message "Couldn't find a gradle project in ancestors directories")
-      (setq cmd (format "cd %s; %s %s"
-                        (shell-quote-wildcard-pattern path)
-                        (shell-quote-argument android-env-executable)
-                        (shell-quote-argument gradle-cmd)))
-      (compilation-start cmd 'android-env-compile-mode))))
+      (compilation-start (format "cd %s; %s %s"
+                                 (shell-quote-wildcard-pattern path)
+                                 (shell-quote-argument android-env-executable)
+                                 (shell-quote-argument gradle-cmd))
+                         'android-env-compile-mode))))
 
 (defun android-env-test ()
   "Execute instrumented test."
