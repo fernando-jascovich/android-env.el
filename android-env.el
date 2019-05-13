@@ -99,7 +99,7 @@ Requires 'hydra."
       (compilation-start (format "cd %s; %s %s"
                                  (shell-quote-wildcard-pattern path)
                                  (shell-quote-argument android-env-executable)
-                                 (shell-quote-argument gradle-cmd))
+                                 gradle-cmd)
                          'android-env-compile-mode))))
 
 (defun android-env-test ()
