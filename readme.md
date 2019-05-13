@@ -1,5 +1,7 @@
 # Android helper functions for Emacs
 
+[![MELPA](https://melpa.org/packages/android-env-badge.svg)](https://melpa.org/#/android-env)
+
 This is simply a bunch of helpers for develop android using emacs.
 
 If you are trying to use emacs for working in android code, you should take a look at:
