@@ -67,14 +67,21 @@ Requires 'hydra."
   :type 'boolean
   :group 'android-env)
 
+(defvar android-env-refactor-file nil
+  "Path to file to be used by android-env-refactor.")
+
 (add-to-list 'compilation-error-regexp-alist-alist
              '(android-java ":compile.*?\\(/.*?\\):\\([0-9]+\\): " 1 2))
+(add-to-list 'compilation-error-regexp-alist-alist
+             '(android-java-2 "^\\(/.[^:]*\\):\\([0-9]*\\): +error:" 1 2))
 (add-to-list 'compilation-error-regexp-alist-alist
              '(android-kotlin "^e: \\(.[^:]*\\): (\\([0-9]*\\), \\([0-9]*\\)" 1 2 3))
 
 (define-compilation-mode android-env-compile-mode "Android Compile"
   "Compilation mode for android compile."
-  (setq-local compilation-error-regexp-alist '(android-java android-kotlin)))
+  (setq-local compilation-error-regexp-alist '(android-java
+                                               android-java-2
+                                               android-kotlin)))
 
 (defun android-env ()
   "Set compilation error regexps."
@@ -209,6 +216,40 @@ Whose fully qualified jvm name is TEST."
                            (shell-quote-argument args))
                    android-env-adb-buffer-name)))
 
+(defun android-env-refactor-map (file)
+  "Return a list with FILE contents.
+FILE should be a comma separated file with pairs of intended replacements."
+  (let ((map '()))
+    (with-temp-buffer
+      (insert-file-contents file)
+      (while (not (eobp))
+        (let* ((line-start (point))
+               (line-end (progn (forward-line 1) (- (point) 1)))
+               (line (buffer-substring line-start line-end)))
+          (push (split-string line ",") map))))
+    map))
+
+(defun android-env-refactor ()
+  "Perform refactor on current buffer based on mappings file contents.
+Mappings file path is stored for further usage at ANDROID-ENV-REFACTOR-FILE.
+When called with prefix it will prompt again for Mappings file."
+  (interactive)
+  (when (or (not android-env-refactor-file) current-prefix-arg)
+    (setq android-env-refactor-file (read-file-name "Mappings file: ")))
+  (let (map from to point-start replacements)
+    (setq point-start (point))
+    (setq map (android-env-refactor-map android-env-refactor-file))
+    (setq replacements 0)
+    (dolist (item map)
+      (setq from (car item))
+      (setq to (car (cdr item)))
+      (goto-char (point-min))
+      (while (re-search-forward from nil t)
+        (replace-match to)
+        (setq replacements (+ replacements 1))))
+    (goto-char point-start)
+    (message "Refactored %d matches" replacements)))
+
 (defun android-env-compile (task)
   "Execute gradle compilation using TASK."
   (interactive "sTask: ")
@@ -219,11 +260,11 @@ Whose fully qualified jvm name is TEST."
   (when (require 'hydra nil 'noerror)
     (defhydra hydra-android (:color teal :hint nil)
       "
-^Compiling^            ^Devices^       ^Logcat^                 ^Adb^
-^^^^^-------------------------------------------------------------------------
-_w_: Compile           _e_: Avd        _l_: Logcat              _U_: Uninstall
-_s_: Instrumented Test _d_: Auto DHU   _c_: Logcat crash        _L_: Deep link
-_u_: Unit Test         ^ ^             _C_: Logcat clear
+^Compiling^              ^Devices^       ^Code^         ^Logcat^           ^Adb^
+^^^^^------------------------------------------------------------------------------------
+_w_: Compile             _e_: Avd        _r_: Refactor  _l_: Logcat        _U_: Uninstall
+_s_: Instrumented Test   _d_: Auto DHU   ^ ^            _c_: Logcat crash  _L_: Deep link
+_u_: Unit Test           ^ ^             ^ ^            _C_: Logcat clear
 _t_: Single unit test
 _x_: Crashlytics
 "
@@ -239,6 +280,7 @@ _x_: Crashlytics
       ("x" android-env-crashlytics)
       ("U" android-env-uninstall-app)
       ("L" android-env-deeplink)
+      ("r" android-env-refactor)
       ("q" nil "quit"))))
 
 
