@@ -229,13 +229,17 @@ FILE should be a comma separated file with pairs of intended replacements."
           (push (split-string line ",") map))))
     map))
 
+(defun android-env-refactor-file-ensure ()
+  "Promps for filling ANDROID-ENV-REFACTOR-FILE when not configured."
+  (when (or (not android-env-refactor-file) current-prefix-arg)
+    (setq android-env-refactor-file (read-file-name "Mappings file: "))))
+
 (defun android-env-refactor ()
   "Perform refactor on current buffer based on mappings file contents.
 Mappings file path is stored for further usage at ANDROID-ENV-REFACTOR-FILE.
 When called with prefix it will prompt again for Mappings file."
   (interactive)
-  (when (or (not android-env-refactor-file) current-prefix-arg)
-    (setq android-env-refactor-file (read-file-name "Mappings file: ")))
+  (android-env-refactor-file-ensure)
   (let (map from to point-start replacements)
     (setq point-start (point))
     (setq map (android-env-refactor-map android-env-refactor-file))
@@ -249,6 +253,18 @@ When called with prefix it will prompt again for Mappings file."
         (setq replacements (+ replacements 1))))
     (goto-char point-start)
     (message "Refactored %d matches" replacements)))
+
+(defun android-env-recursive-refactor (match)
+  "Call ANDROID-ENV-REFACTOR for every file matching MATCH recursively."
+  (interactive "sMatch regexp: ")
+  (android-env-refactor-file-ensure)
+  (let ((files (directory-files-recursively default-directory match)))
+    (dolist (file files)
+      (with-current-buffer (find-file-noselect file)
+        (message "Working on: %s..." file)
+        (android-env-refactor)
+        (save-buffer)
+        (kill-buffer)))))
 
 (defun android-env-compile (task)
   "Execute gradle compilation using TASK."
