@@ -276,11 +276,11 @@ When called with prefix it will prompt again for Mappings file."
   (when (require 'hydra nil 'noerror)
     (defhydra hydra-android (:color teal :hint nil)
       "
-^Compiling^              ^Devices^       ^Code^         ^Logcat^           ^Adb^
-^^^^^------------------------------------------------------------------------------------
-_w_: Compile             _e_: Avd        _r_: Refactor  _l_: Logcat        _U_: Uninstall
-_s_: Instrumented Test   _d_: Auto DHU   ^ ^            _c_: Logcat crash  _L_: Deep link
-_u_: Unit Test           ^ ^             ^ ^            _C_: Logcat clear
+^Compiling^              ^Devices^       ^Code^                   ^Logcat^           ^Adb^
+^^^^^----------------------------------------------------------------------------------------------
+_w_: Compile             _e_: Avd        _r_: Refactor            _l_: Logcat        _U_: Uninstall
+_s_: Instrumented Test   _d_: Auto DHU   _R_: Recursive refactor  _c_: Logcat crash  _L_: Deep link
+_u_: Unit Test           ^ ^             ^ ^                      _C_: Logcat clear
 _t_: Single unit test
 _x_: Crashlytics
 "
@@ -297,6 +297,7 @@ _x_: Crashlytics
       ("U" android-env-uninstall-app)
       ("L" android-env-deeplink)
       ("r" android-env-refactor)
+      ("R" android-env-recursive-refactor)
       ("q" nil "quit"))))
 
 
