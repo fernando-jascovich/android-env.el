@@ -112,6 +112,12 @@ Requires 'hydra."
   (interactive)
   (android-env-gradle android-env-unit-test-command))
 
+(defun android-env-unit-test-single (build test)
+  "Execute a single unit test from BUILD.
+Whose fully qualified jvm name is TEST."
+  (interactive "sBuild: \nsTest: ")
+  (android-env-gradle (concat "test" build (format " --tests %s" test))))
+
 (defun android-env-avd-list ()
   "Return shell command output as list."
   (let (out out-list avdmanager)
@@ -218,6 +224,7 @@ Requires 'hydra."
 _w_: Compile           _e_: Avd        _l_: Logcat              _U_: Uninstall
 _s_: Instrumented Test _d_: Auto DHU   _c_: Logcat crash        _L_: Deep link
 _u_: Unit Test         ^ ^             _C_: Logcat clear
+_t_: Single unit test
 _x_: Crashlytics
 "
       ("w" android-env-compile)
@@ -228,6 +235,7 @@ _x_: Crashlytics
       ("l" android-env-logcat)
       ("c" android-env-logcat-crash)
       ("C" android-env-logcat-clear)
+      ("t" android-env-unit-test-single)
       ("x" android-env-crashlytics)
       ("U" android-env-uninstall-app)
       ("L" android-env-deeplink)
