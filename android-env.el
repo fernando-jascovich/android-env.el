@@ -237,7 +237,8 @@ FILE should be a comma separated file with pairs of intended replacements."
 (defun android-env-refactor ()
   "Perform refactor on current buffer based on mappings file contents.
 Mappings file path is stored for further usage at ANDROID-ENV-REFACTOR-FILE.
-When called with prefix it will prompt again for Mappings file."
+When called with prefix it will prompt again for Mappings file.
+It will return the number of replacements performed."
   (interactive)
   (android-env-refactor-file-ensure)
   (let (map from to point-start replacements)
@@ -252,7 +253,8 @@ When called with prefix it will prompt again for Mappings file."
         (replace-match to)
         (setq replacements (+ replacements 1))))
     (goto-char point-start)
-    (message "Refactored %d matches" replacements)))
+    (message "Refactored %d matches" replacements)
+    replacements))
 
 (defun android-env-recursive-refactor (match)
   "Call ANDROID-ENV-REFACTOR for every file matching MATCH recursively."
@@ -262,8 +264,8 @@ When called with prefix it will prompt again for Mappings file."
     (dolist (file files)
       (with-current-buffer (find-file-noselect file)
         (message "Working on: %s..." file)
-        (android-env-refactor)
-        (save-buffer)
+        (if (> (android-env-refactor) 0)
+            (save-buffer))
         (kill-buffer)))))
 
 (defun android-env-compile (task)
