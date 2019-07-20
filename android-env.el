@@ -218,7 +218,9 @@ Whose fully qualified jvm name is TEST."
 
 (defun android-env-refactor-map (file)
   "Return a list with FILE contents.
-FILE should be a comma separated file with pairs of intended replacements."
+FILE should be a comma separated file with pairs of intended replacements.
+Take for example this androidx migration mapping file:
+https://developer.android.com/topic/libraries/support-library/downloads/androidx-class-mapping.csv"
   (let ((map '()))
     (with-temp-buffer
       (insert-file-contents file)
@@ -261,6 +263,7 @@ It will return the number of replacements performed."
   (interactive "sMatch regexp: ")
   (android-env-refactor-file-ensure)
   (let ((files (directory-files-recursively default-directory match)))
+    (message "%d files matched" (length files))
     (dolist (file files)
       (with-current-buffer (find-file-noselect file)
         (message "Working on: %s..." file)
