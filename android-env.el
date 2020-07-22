@@ -46,7 +46,7 @@
   :group 'android-env)
 
 (defcustom android-env-emulator-command
-  "~/.android/sdk/emulator/emulator"
+  "emulator"
   "Android emulator bin location."
   :type 'string
   :group 'android-env)
@@ -185,8 +185,7 @@ Whose fully qualified jvm name is TEST."
 (defun android-env-logcat (&optional tag)
   "Show logcat using TAG for filtering."
   (interactive "sTag: ")
-  (let ((bname "*Android Logcat*")
-        (args '())
+  (let ((args '())
         (args-format ""))
     (when (and tag (not (string= "" tag)))
       (add-to-list 'args "*:S")
@@ -197,6 +196,28 @@ Whose fully qualified jvm name is TEST."
   "Show logcat's crash buffer."
   (interactive)
   (android-env-logcat-buffer '("-b" "crash")))
+
+(defun android-env-logcat-pid-assoc (str)
+  "Convert STR to assoc list with pid as car and process as cdr."
+  (split-string str "\d "))
+
+(defun android-env-logcat-pid ()
+  "Start logcat but filtering for a specific pid."
+  (interactive)
+  (let (pid running-pids cmd map prompt)
+    (setq cmd (format "%s shell ps -A -o PID,ARGS=CMD" (android-env-adb)))
+    (setq running-pids (split-string (shell-command-to-string cmd) "\n" t " *"))
+    (setq map (make-hash-table :size (length running-pids) :test 'equal))
+    (setq prompt '())
+    (mapc (lambda (x)
+            (let* ((x-parts (s-split-up-to " " x 2 t))
+                   (key (car (cdr x-parts))))
+              (add-to-list 'prompt key)
+              (puthash key (car x-parts) map)))
+          running-pids)
+    (setq pid (gethash (completing-read "Select process: " prompt) map))
+    (message "pid: %s" pid)
+    (android-env-logcat-buffer (list "--pid" pid))))
 
 (defun android-env-uninstall-app (package)
   "Uninstall application by PACKAGE name."
@@ -285,8 +306,8 @@ It will return the number of replacements performed."
 ^^^^^----------------------------------------------------------------------------------------------
 _w_: Compile             _e_: Avd        _r_: Refactor            _l_: Logcat        _U_: Uninstall
 _s_: Instrumented Test   _d_: Auto DHU   _R_: Recursive refactor  _c_: Logcat crash  _L_: Deep link
-_u_: Unit Test           ^ ^             ^ ^                      _C_: Logcat clear
-_t_: Single unit test
+_u_: Unit Test           ^ ^             ^ ^                      _p_: Logcat by pid
+_t_: Single unit test    ^ ^             ^ ^                      _C_: Logcat clear
 _x_: Crashlytics
 "
       ("w" android-env-compile)
@@ -297,6 +318,7 @@ _x_: Crashlytics
       ("l" android-env-logcat)
       ("c" android-env-logcat-crash)
       ("C" android-env-logcat-clear)
+      ("p" android-env-logcat-pid)
       ("t" android-env-unit-test-single)
       ("x" android-env-crashlytics)
       ("U" android-env-uninstall-app)
