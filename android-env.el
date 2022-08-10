@@ -4,7 +4,7 @@
 ;; Keywords: android, gradle, java, tools, convenience
 ;; Version: 0.1
 ;; Url: https://github.com/fernando-jascovich/android-env.el
-;; Package-Requires: ((emacs "24.3"))
+;; Package-Requires: ((emacs "24.3") (s "1.12.0"))
 
 ;; This file is NOT part of GNU Emacs
 ;; This program is free software; you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 
 ;;; Code:
 (require 'compile)
+(require 's)
 (require 'hydra nil 'noerror)
 
 (defgroup android-env nil
